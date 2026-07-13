@@ -1,8 +1,5 @@
 # DSV / DB Schenker public tracking — reverse-engineered API notes
 
-Source: HAR capture of `https://www.dsv.com/mydsv/tracking-public/?language_region=en-GB_GB&refNumber=3476236157`
-(`https://www.dbschenker.com/app/tracking-public/` redirects here). Captured 2026-07-13.
-
 ## Entry point
 
 - `https://www.dbschenker.com/app/tracking-public/` → 302 → `https://www.dsv.com/mydsv/tracking-public/`
