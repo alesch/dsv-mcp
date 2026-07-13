@@ -1,3 +1,4 @@
+#!/usr/bin/env -S uv run --project /home/alex/dev/Sendify/mcp python
 """Standalone CLI to exercise dsv_tracking.browser_client directly.
 
 Usage:
