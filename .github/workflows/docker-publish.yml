@@ -2,7 +2,7 @@ name: Build and publish Docker image
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch: {}
 
 permissions:
@@ -29,5 +29,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/alesch/dsv-mcp:main
+            ghcr.io/alesch/dsv-mcp:${{ github.ref_name }}
             ghcr.io/alesch/dsv-mcp:${{ github.sha }}
