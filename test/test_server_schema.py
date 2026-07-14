@@ -13,11 +13,13 @@ from dsv_tracking.server import mcp
 
 
 @pytest.mark.asyncio
-async def test_track_shipment_output_schema_is_currently_unstructured():
+async def test_track_shipment_output_schema_is_structured():
     tools = await mcp.list_tools()
     track_shipment = next(t for t in tools if t.name == "track_shipment")
 
-    # Baseline as of Phase 1: a bare `-> dict` return annotation does NOT
-    # trigger FastMCP structured output. This assertion is expected to
-    # flip once Phase 2 switches the return type to a Pydantic model.
-    assert track_shipment.outputSchema is None
+    # Since the Phase 2 dataclass -> Pydantic BaseModel migration,
+    # track_shipment returns a TrackShipmentResult model directly, so
+    # FastMCP now advertises a real nested schema instead of None.
+    schema = track_shipment.outputSchema
+    assert schema is not None
+    assert set(schema["properties"]) == {"summary", "detail", "trip", "error"}

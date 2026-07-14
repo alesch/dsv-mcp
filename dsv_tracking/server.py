@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import BaseModel
 
 from dsv_tracking.browser_client import TrackingClient
-from dsv_tracking.models import ShipmentNotFound
+from dsv_tracking.models import ShipmentDetail, ShipmentNotFound, ShipmentSummary, Trip
 
 
 @dataclass
@@ -37,27 +37,30 @@ mcp = FastMCP(
 )
 
 
+class TrackShipmentResult(BaseModel):
+    summary: ShipmentSummary | None = None
+    detail: ShipmentDetail | None = None
+    trip: Trip | None = None
+    error: str | None = None
+
+
 @mcp.tool()
-async def track_shipment(reference_number: str, ctx: Context) -> dict:
+async def track_shipment(reference_number: str, ctx: Context) -> TrackShipmentResult:
     """Look up a shipment on DSV/DB Schenker's public tracking site.
 
     reference_number can be a waybill number, STT number, or other reference
     accepted by https://www.dsv.com/mydsv/tracking-public/ (e.g. "3476236157").
 
     Returns shipment status, route, event timeline, and package details, or
-    an {"error": ...} dict if no shipment matches the reference.
+    a result with only `error` set if no shipment matches the reference.
     """
     app_ctx: AppContext = ctx.request_context.lifespan_context
     try:
         summary, detail, trip = await app_ctx.tracking_client.track(reference_number)
     except ShipmentNotFound:
-        return {"error": f"No shipment found for reference {reference_number!r}"}
+        return TrackShipmentResult(error=f"No shipment found for reference {reference_number!r}")
 
-    return {
-        "summary": dataclasses.asdict(summary),
-        "detail": dataclasses.asdict(detail),
-        "trip": dataclasses.asdict(trip) if trip is not None else None,
-    }
+    return TrackShipmentResult(summary=summary, detail=detail, trip=trip)
 
 
 def main() -> None:

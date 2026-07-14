@@ -90,8 +90,7 @@ fetching full detail) justified a finer-grained surface.
 root by construction — no user to prompt, no interactive `sudo` — so
 `RUN uv run playwright install --with-deps chromium` inside the
 [`Dockerfile`](../Dockerfile) just works, unconditionally, on any machine
-that can run `docker build`. Full rationale in
-[`docker-packaging.md`](./docker-packaging.md).
+that can run `docker build`.
 
 **Consequences:** Consumers need only Docker itself — no `uv`, no matching
 Python version, no manual Playwright step. Cost: a 600MB image over the network.
@@ -198,3 +197,35 @@ cookie consent on every container run instead of just the first.
 running on bare metal, but no added deployment complexity (no volume to
 provision or document). Revisit if this ever needs to run high-frequency
 enough that the extra consent-banner round trip becomes a real cost.
+
+---
+
+## ADR-0011: Collapse `dsv_tracking/models.py` from dataclasses into Pydantic models
+
+**Context:** `track_shipment`'s MCP tool returned a bare `dict`, which
+doesn't trigger FastMCP structured output — no schema in `tools/list`, no
+`structuredContent` in results. Fixing that needed *some* typed
+description of the return shape. First draft: add `TypedDict`s mirroring
+the existing dataclasses just for the schema. Correct pushback on that
+draft: it creates two representations of the same shape (dataclasses for
+parsing/internal use, `TypedDict`s for the MCP boundary) that would need
+to be kept in sync by hand indefinitely.
+
+**Decision:** Replace the dataclasses in `dsv_tracking/models.py` with
+Pydantic `BaseModel`s outright, so one representation does all three jobs
+that were previously split across dataclasses + manual `from_json` +
+manual `dataclasses.asdict()`: parses and validates DSV's raw JSON (field
+aliases for the camelCase → snake_case renames,
+`@model_validator(mode="before")` for the flattening `from_json` used to
+do by hand), serves as the internal representation passed around
+`TrackingClient`, and serves as the MCP tool's structured output
+directly — `server.py` returns a `TrackShipmentResult(BaseModel)`
+instance rather than hand-building a dict.
+
+**Consequences:** A malformed API response now raises
+`pydantic.ValidationError` naming the exact field that failed, instead of
+a bare `KeyError` — strictly more informative. `pydantic` was already an
+installed transitive dependency (via `mcp`), so this added nothing new.
+The migration was verified by the pytest suite (offline model-parsing
+tests, the schema check, and the real integration/docker end-to-end
+tests) rather than another round of manual scripts.

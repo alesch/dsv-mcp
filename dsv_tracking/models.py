@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ShipmentNotFound(Exception):
@@ -9,72 +9,65 @@ class ShipmentNotFound(Exception):
         self.reference_number = reference_number
 
 
-@dataclass
-class ShipmentSummary:
+class ShipmentSummary(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     stt: str
-    transport_mode: str
-    percentage_progress: int
-    last_event_code: str
-    from_location: str
-    to_location: str
-    start_date: str | None
-    end_date: str | None
-
-    @classmethod
-    def from_json(cls, data: dict) -> ShipmentSummary:
-        return cls(
-            id=data["id"],
-            stt=data["stt"],
-            transport_mode=data["transportMode"],
-            percentage_progress=data["percentageProgress"],
-            last_event_code=data["lastEventCode"],
-            from_location=data["fromLocation"],
-            to_location=data["toLocation"],
-            start_date=data.get("startDate"),
-            end_date=data.get("endDate"),
-        )
+    transport_mode: str = Field(alias="transportMode")
+    percentage_progress: int = Field(alias="percentageProgress")
+    last_event_code: str = Field(alias="lastEventCode")
+    from_location: str = Field(alias="fromLocation")
+    to_location: str = Field(alias="toLocation")
+    start_date: str | None = Field(default=None, alias="startDate")
+    end_date: str | None = Field(default=None, alias="endDate")
 
 
-@dataclass
-class TrackingEvent:
+class TrackingEvent(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     code: str
     date: str
-    comment: str | None
-    location_name: str | None
-    location_country_code: str | None
+    comment: str | None = None
+    location_name: str | None = None
+    location_country_code: str | None = None
 
+    @model_validator(mode="before")
     @classmethod
-    def from_json(cls, data: dict) -> TrackingEvent:
-        location = data.get("location") or {}
-        return cls(
-            code=data["code"],
-            date=data["date"],
-            comment=data.get("comment"),
-            location_name=location.get("name"),
-            location_country_code=location.get("countryCode"),
-        )
+    def _flatten_location(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        location = data.pop("location", None) or {}
+        data.setdefault("location_name", location.get("name"))
+        data.setdefault("location_country_code", location.get("countryCode"))
+        return data
 
 
-@dataclass
-class ShipmentDetail:
+class ShipmentDetail(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     stt_number: str
     transport_mode: str
-    product: str | None
-    active_step: str | None
-    steps: list[str]
-    events: list[TrackingEvent]
-    pieces: int | None
-    weight_value: float | None
-    weight_unit: str | None
-    collect_from: str | None
-    deliver_to: str | None
-    delivery_date_estimated: str | None
-    delivery_date_agreed: str | None
-    waybill_numbers: list[str]
+    product: str | None = None
+    active_step: str | None = None
+    steps: list[str] = Field(default_factory=list)
+    events: list[TrackingEvent] = Field(default_factory=list)
+    pieces: int | None = None
+    weight_value: float | None = None
+    weight_unit: str | None = None
+    collect_from: str | None = None
+    deliver_to: str | None = None
+    delivery_date_estimated: str | None = None
+    delivery_date_agreed: str | None = None
+    waybill_numbers: list[str] = Field(default_factory=list)
 
+    @model_validator(mode="before")
     @classmethod
-    def from_json(cls, data: dict) -> ShipmentDetail:
+    def _flatten(cls, data):
+        if not isinstance(data, dict):
+            return data
+
         goods = data.get("goods") or {}
         weight = goods.get("weight") or {}
         progress_bar = data.get("progressBar") or {}
@@ -90,49 +83,35 @@ class ShipmentDetail:
             parts = [place.get("city"), place.get("postCode"), place.get("country")]
             return ", ".join(p for p in parts if p)
 
-        return cls(
-            stt_number=data["sttNumber"],
-            transport_mode=data["transportMode"],
-            product=data.get("product"),
-            active_step=progress_bar.get("activeStep"),
-            steps=progress_bar.get("steps", []),
-            events=[TrackingEvent.from_json(e) for e in data.get("events", [])],
-            pieces=goods.get("pieces"),
-            weight_value=weight.get("value"),
-            weight_unit=weight.get("unit"),
-            collect_from=city_line(collect_from),
-            deliver_to=city_line(deliver_to),
-            delivery_date_estimated=delivery_date.get("estimated"),
-            delivery_date_agreed=delivery_date.get("agreed"),
-            waybill_numbers=references.get("waybillAndConsignementNumbers", []),
-        )
+        return {
+            "stt_number": data.get("sttNumber"),
+            "transport_mode": data.get("transportMode"),
+            "product": data.get("product"),
+            "active_step": progress_bar.get("activeStep"),
+            "steps": progress_bar.get("steps", []),
+            "events": data.get("events", []),
+            "pieces": goods.get("pieces"),
+            "weight_value": weight.get("value"),
+            "weight_unit": weight.get("unit"),
+            "collect_from": city_line(collect_from),
+            "deliver_to": city_line(deliver_to),
+            "delivery_date_estimated": delivery_date.get("estimated"),
+            "delivery_date_agreed": delivery_date.get("agreed"),
+            "waybill_numbers": references.get("waybillAndConsignementNumbers", []),
+        }
 
 
-@dataclass
-class TripPoint:
-    last_event_code: str
-    last_event_date: str
+class TripPoint(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    last_event_code: str = Field(alias="lastEventCode")
+    last_event_date: str = Field(alias="lastEventDate")
     latitude: float
     longitude: float
 
-    @classmethod
-    def from_json(cls, data: dict) -> TripPoint:
-        return cls(
-            last_event_code=data["lastEventCode"],
-            last_event_date=data["lastEventDate"],
-            latitude=data["latitude"],
-            longitude=data["longitude"],
-        )
 
+class Trip(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
 
-@dataclass
-class Trip:
-    is_delivered: bool
-    points: list[TripPoint]
-
-    @classmethod
-    def from_json(cls, data: dict) -> Trip:
-        return cls(
-            is_delivered=data.get("isDelivered", False),
-            points=[TripPoint.from_json(p) for p in data.get("trip", [])],
-        )
+    is_delivered: bool = Field(default=False, alias="isDelivered")
+    points: list[TripPoint] = Field(default_factory=list, alias="trip")

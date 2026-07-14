@@ -155,16 +155,16 @@ class TrackingClient:
             results = search_data.get("result", [])
             if not results:
                 raise ShipmentNotFound(reference_number)
-            summary = ShipmentSummary.from_json(results[0])
+            summary = ShipmentSummary.model_validate(results[0])
 
             detail_response = await asyncio.wait_for(detail_future, timeout=self._response_timeout)
             detail_data = await detail_response.json()
-            detail = ShipmentDetail.from_json(detail_data)
+            detail = ShipmentDetail.model_validate(detail_data)
 
             trip: Trip | None = None
             try:
                 trip_response = await asyncio.wait_for(trip_future, timeout=self._response_timeout)
-                trip = Trip.from_json(await trip_response.json())
+                trip = Trip.model_validate(await trip_response.json())
             except asyncio.TimeoutError:
                 trip = None
 

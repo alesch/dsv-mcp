@@ -6,6 +6,9 @@ docs/dsv-tracking-api.md (captured from the live site). No network calls.
 
 from __future__ import annotations
 
+import pydantic
+import pytest
+
 from dsv_tracking.models import ShipmentDetail, ShipmentSummary, Trip
 
 SHIPMENTS_QUERY_RESPONSE = {
@@ -84,7 +87,7 @@ TRIP_RESPONSE = {
 
 
 def test_shipment_summary_from_json():
-    summary = ShipmentSummary.from_json(SHIPMENTS_QUERY_RESPONSE["result"][0])
+    summary = ShipmentSummary.model_validate(SHIPMENTS_QUERY_RESPONSE["result"][0])
     assert summary.id == "LandStt:SESOE620172194:CTTS:LAND"
     assert summary.stt == "SESOE620172194"
     assert summary.transport_mode == "LAND"
@@ -95,7 +98,7 @@ def test_shipment_summary_from_json():
 
 
 def test_shipment_detail_from_json():
-    detail = ShipmentDetail.from_json(SHIPMENT_DETAIL_RESPONSE)
+    detail = ShipmentDetail.model_validate(SHIPMENT_DETAIL_RESPONSE)
     assert detail.stt_number == "SESOE620172194"
     assert detail.transport_mode == "LAND"
     assert detail.product == "DSVparcel"
@@ -118,9 +121,20 @@ def test_shipment_detail_from_json():
 
 
 def test_trip_from_json():
-    trip = Trip.from_json(TRIP_RESPONSE)
+    trip = Trip.model_validate(TRIP_RESPONSE)
     assert trip.is_delivered is True
     assert len(trip.points) == 2
     assert trip.points[0].last_event_code == "COL"
     assert trip.points[0].latitude == 59.22888181
     assert trip.points[1].last_event_code == "DLV"
+
+
+def test_shipment_summary_missing_field_raises_validation_error():
+    incomplete = dict(SHIPMENTS_QUERY_RESPONSE["result"][0])
+    del incomplete["transportMode"]
+
+    with pytest.raises(pydantic.ValidationError) as exc_info:
+        ShipmentSummary.model_validate(incomplete)
+
+    errors = exc_info.value.errors()
+    assert any(error["loc"] == ("transportMode",) and error["type"] == "missing" for error in errors)
