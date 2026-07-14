@@ -8,6 +8,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY dsv_tracking/ ./dsv_tracking/
+COPY scripts/ ./scripts/
 RUN uv sync --frozen --no-dev
 
 RUN uv run playwright install --with-deps chromium
