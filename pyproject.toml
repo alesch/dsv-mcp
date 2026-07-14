@@ -8,6 +8,20 @@ dependencies = [
     "mcp>=1.2.0",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "integration: hits the real DSV site through a real browser (slow, paced)",
+    "docker: runs against a built Docker image (slow, requires a local image)",
+]
+addopts = "-m 'not integration and not docker'"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
