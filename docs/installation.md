@@ -120,13 +120,11 @@ The image is 600MB uncompressed (Chromium plus its system
   libraries dominate that size). Your MCP client may look like it's hung during this — it isn't, `docker` is downloading in the background.
 - **Every launch after that**: the tag is already cached locally, so `docker run` starts immediately (a couple seconds) with no network fetch at all. `:master` is a moving tag, but Docker does not automatically re-check the registry for a newer version of a tag it already has cached — so this stays fast indefinitely, until you explicitly pull again.
 
-**To avoid hitting that delay live** (e.g. right before a demo), pre-pull once ahead of time:
+**To avoid hitting that delay live** (e.g. right before a demo), pre-pull once ahead of time, then your MCP client's first real launch will already find the image cached and start fast.
 
 ```
 docker pull ghcr.io/alesch/dsv-mcp:master
 ```
-
-then your MCP client's first real launch will already find the image cached and start fast.
 
 ### Per-lookup pacing
 
