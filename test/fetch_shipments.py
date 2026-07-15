@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import dataclasses
 import json
 import sys
 from datetime import datetime, timezone
@@ -74,9 +73,9 @@ async def main() -> int:
             results.append(
                 {
                     "reference_number": ref,
-                    "summary": dataclasses.asdict(summary),
-                    "detail": dataclasses.asdict(detail),
-                    "trip": dataclasses.asdict(trip) if trip is not None else None,
+                    "summary": summary.model_dump(),
+                    "detail": detail.model_dump(),
+                    "trip": trip.model_dump() if trip is not None else None,
                 }
             )
 
