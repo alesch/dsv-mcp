@@ -4,6 +4,8 @@
 
 Just Docker. See their [installation guide](https://docs.docker.com/engine/install/) for details.
 
+The image is public — no `docker login` needed.
+
 ## 1. Add it to your MCP client config
 
 ```json
@@ -17,33 +19,31 @@ Just Docker. See their [installation guide](https://docs.docker.com/engine/insta
 }
 ```
 
-For Claude Code, equivalently:
+- **Claude Code**
 
 ```
 claude mcp add dsv-tracking -- docker run -i --rm ghcr.io/alesch/dsv-mcp:master
 ```
 
-Other popular clients accept the same (or a near-identical) `mcpServers`
-block shown above, just in a different config file:
-
 - **Cursor** — add it to `~/.cursor/mcp.json` (global, all projects) or
   `.cursor/mcp.json` in a project root (project-only, safe to commit for a
   shared team config). No CLI needed; also editable via Settings → MCP.
+
 - **Windsurf** — same block, in `~/.codeium/windsurf/mcp_config.json`.
-- **Antigravity** (Google) — same block, in
+
+- **Antigravity** — same block, in
   `~/.gemini/config/mcp_config.json` (shared by the Antigravity IDE and
   CLI). Also reachable in-app: agent panel's MCP Servers dropdown → Manage
   MCP Servers → View raw config.
-- **VS Code** (GitHub Copilot) — almost the same, but the top-level key is
-  `servers` instead of `mcpServers`, in `.vscode/mcp.json` (workspace) or
+
+- **VS Code** (GitHub Copilot) — in `.vscode/mcp.json` (workspace) or
   your user profile. Equivalently from the command line:
 
   ```
   code --add-mcp "{\"name\":\"dsv-tracking\",\"command\":\"docker\",\"args\":[\"run\",\"-i\",\"--rm\",\"ghcr.io/alesch/dsv-mcp:master\"]}"
   ```
 
-- **Zed editor** — different key and shape (`context_servers`, and each entry
-  needs `"source": "custom"`), in `~/.config/zed/settings.json` (open it
+- **Zed editor** — in `~/.config/zed/settings.json` (open it
   from the command palette with "zed: open settings"):
 
   ```json
@@ -58,7 +58,24 @@ block shown above, just in a different config file:
   }
   ```
 
-The image is public — no `docker login` needed.
+- **opencode** — in `opencode.json` (project root) or
+  `~/.config/opencode/opencode.json` (global):
+
+  ```json
+  {
+    "mcp": {
+      "dsv-tracking": {
+        "type": "local",
+        "command": ["docker", "run", "-i", "--rm", "ghcr.io/alesch/dsv-mcp:master"]
+      }
+    }
+  }
+  ```
+
+- **Pi** (pi.dev coding agent) — same `mcpServers` block as the generic
+  example above, in `~/.pi/agent/mcp.json`. Also configurable interactively
+  by running `/mcp` inside Pi.
+
 
 ## 2. Understanding the first-run delay
 
