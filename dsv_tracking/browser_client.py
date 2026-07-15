@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import random
 import re
 import time
@@ -19,9 +20,21 @@ _SEARCH_RE = re.compile(r"/nges-portal/api/public/tracking-public/shipments\?que
 _DETAIL_RE = re.compile(r"/nges-portal/api/public/tracking-public/shipments/[a-z]+/[^/]+$")
 _TRIP_RE = re.compile(r"/nges-portal/api/public/tracking-public/shipments/[a-z]+/[^/]+/trip$")
 
-_PROFILE_DIR = Path.home() / ".cache" / "dsv-tracking-mcp" / "browser-profile"
+_DEFAULT_PROFILE_DIR = Path.home() / ".cache" / "dsv-tracking-mcp" / "browser-profile"
 
 logger = logging.getLogger(__name__)
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() not in ("0", "false", "no", "")
+
+
+def _env_float(name: str, default: float) -> float:
+    value = os.environ.get(name)
+    return default if value is None else float(value)
 
 
 class TrackingClient:
@@ -36,17 +49,28 @@ class TrackingClient:
 
     def __init__(
         self,
-        headless: bool = True,
-        min_delay: float = 1.0,
-        max_delay: float = 3.0,
-        cooldown: float = 7.0,
-        response_timeout: float = 45.0,
+        headless: bool | None = None,
+        min_delay: float | None = None,
+        max_delay: float | None = None,
+        cooldown: float | None = None,
+        response_timeout: float | None = None,
+        user_data_dir: Path | str | None = None,
     ):
-        self._headless = headless
-        self._min_delay = min_delay
-        self._max_delay = max_delay
-        self._cooldown = cooldown
-        self._response_timeout = response_timeout
+        self._headless = headless if headless is not None else _env_bool("TRACKING_HEADLESS", True)
+        self._min_delay = min_delay if min_delay is not None else _env_float("TRACKING_MIN_DELAY", 1.0)
+        self._max_delay = max_delay if max_delay is not None else _env_float("TRACKING_MAX_DELAY", 3.0)
+        self._cooldown = cooldown if cooldown is not None else _env_float("TRACKING_COOLDOWN", 7.0)
+        self._response_timeout = (
+            response_timeout
+            if response_timeout is not None
+            else _env_float("TRACKING_RESPONSE_TIMEOUT", 45.0)
+        )
+        if user_data_dir is not None:
+            self._user_data_dir = Path(user_data_dir)
+        elif os.environ.get("TRACKING_USER_DATA_DIR"):
+            self._user_data_dir = Path(os.environ["TRACKING_USER_DATA_DIR"])
+        else:
+            self._user_data_dir = _DEFAULT_PROFILE_DIR
 
         self._lock = asyncio.Lock()
         self._last_call_at: float | None = None
@@ -56,11 +80,11 @@ class TrackingClient:
         self._page = None
 
     async def start(self) -> None:
-        _PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-        logger.info("Starting Playwright Chromium browser using profile: %s", _PROFILE_DIR)
+        self._user_data_dir.mkdir(parents=True, exist_ok=True)
+        logger.info("Starting Playwright Chromium browser using profile: %s", self._user_data_dir)
         self._playwright = await async_playwright().start()
         self._context = await self._playwright.chromium.launch_persistent_context(
-            user_data_dir=str(_PROFILE_DIR),
+            user_data_dir=str(self._user_data_dir),
             headless=self._headless,
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -72,10 +96,35 @@ class TrackingClient:
         await self._warm_up()
 
     async def close(self) -> None:
-        if self._context is not None:
-            await self._context.close()
-        if self._playwright is not None:
-            await self._playwright.stop()
+        try:
+            if self._context is not None:
+                await self._context.close()
+        except Exception as exc:
+            logger.debug("Ignoring error while closing browser context: %s", exc)
+        finally:
+            self._context = None
+            self._page = None
+
+        try:
+            if self._playwright is not None:
+                await self._playwright.stop()
+        except Exception as exc:
+            logger.debug("Ignoring error while stopping Playwright: %s", exc)
+        finally:
+            self._playwright = None
+
+    def _is_healthy(self) -> bool:
+        if self._context is None or self._page is None:
+            return False
+        try:
+            return not self._page.is_closed()
+        except Exception:
+            return False
+
+    async def _recover(self) -> None:
+        logger.warning("Recovering from a crashed/disconnected browser context. Restarting...")
+        await self.close()
+        await self.start()
 
     async def __aenter__(self) -> TrackingClient:
         await self.start()
@@ -125,9 +174,21 @@ class TrackingClient:
         Raises ShipmentNotFound if the site has no match.
         """
         async with self._lock:
+            if not self._is_healthy():
+                await self._recover()
             await self._respect_cooldown()
             try:
-                return await self._track_locked(reference_number)
+                try:
+                    return await self._track_locked(reference_number)
+                except Exception:
+                    if self._is_healthy():
+                        raise
+                    logger.warning(
+                        "Browser context died mid-lookup for reference %s; recovering and retrying once",
+                        reference_number,
+                    )
+                    await self._recover()
+                    return await self._track_locked(reference_number)
             finally:
                 self._last_call_at = time.monotonic()
 

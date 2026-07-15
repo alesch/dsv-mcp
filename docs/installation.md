@@ -12,11 +12,12 @@
   - [Zed editor](#zed-editor)
   - [opencode](#opencode)
   - [Pi](#pi)
-- [2. Understanding delays](#2-understanding-delays)
+- [2. Configuring the browser (optional)](#2-configuring-the-browser-optional)
+- [3. Understanding delays](#3-understanding-delays)
   - [First-run delay](#first-run-delay)
   - [per-lookup pacing](#per-lookup-pacing)
-- [3. Getting updates later](#3-getting-updates-later)
-- [4. Verifying it works](#4-verifying-it-works)
+- [4. Getting updates later](#4-getting-updates-later)
+- [5. Verifying it works](#5-verifying-it-works)
   - [Send it a reference number and read the output directly](#send-it-a-reference-number-and-read-the-output-directly)
   - [Through an MCP client](#through-an-mcp-client)
 
@@ -109,7 +110,40 @@ In `opencode.json` (project root) or `~/.config/opencode/opencode.json`
 above, in `~/.pi/agent/mcp.json`. Also configurable interactively by
 running `/mcp` inside Pi.
 
-## 2. Understanding delays
+## 2. Configuring the browser (optional)
+
+The container's default browser settings work out of the box — this section
+is only for tuning them. Set these in the `env` block of your MCP client
+config (same JSON block as [step 1](#1-mcp-client-config)):
+
+```json
+{
+  "mcpServers": {
+    "dsv-tracking": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/alesch/dsv-mcp:master"],
+      "env": {
+        "TRACKING_HEADLESS": "false",
+        "TRACKING_RESPONSE_TIMEOUT": "60"
+      }
+    }
+  }
+}
+```
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `TRACKING_HEADLESS` | `true` | Set `false` to see the Chromium window (mostly useful when debugging locally, not inside a headless container). |
+| `TRACKING_USER_DATA_DIR` | `~/.cache/dsv-tracking-mcp/browser-profile` | Where the persistent browser profile (cookies, anti-bot state) is stored. |
+| `TRACKING_MIN_DELAY` / `TRACKING_MAX_DELAY` | `1.0` / `3.0` | Range (seconds) for the random human-pacing delay before each navigation. |
+| `TRACKING_COOLDOWN` | `7.0` | Minimum seconds enforced between the end of one lookup and the start of the next. |
+| `TRACKING_RESPONSE_TIMEOUT` | `45.0` | Seconds to wait for each DSV API response before giving up. |
+
+If running the server directly (not via Docker), pass these the same way
+any environment variable is set for a process, e.g.
+`TRACKING_HEADLESS=false uv run python -m dsv_tracking.server`.
+
+## 3. Understanding delays
 
 ### First-run delay
 
@@ -131,7 +165,7 @@ docker pull ghcr.io/alesch/dsv-mcp:master
 Once the server is running, each `track_shipment` call still takes up to ~30 seconds — that's not a download, it's the tool deliberately driving a real browser with human-like pauses (see
 [`anti-bot-puzzle.md`](./anti-bot-puzzle.md)) instead of hammering DSV's API. The per-call delay happens on every single lookup, by design.
 
-## 3. Getting updates later
+## 4. Getting updates later
 
 Since `:master` won't auto-refresh, picking up a newer build (after a new push to the repo triggers `.github/workflows/docker-publish.yml`) requires an explicit re-pull:
 
@@ -141,7 +175,7 @@ docker pull ghcr.io/alesch/dsv-mcp:master
 
 Restart your MCP client afterward so it spawns a fresh container from the updated image.
 
-## 4. Verifying it works
+## 5. Verifying it works
 
 ### Send it a reference number and read the output directly
 
