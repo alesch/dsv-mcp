@@ -26,3 +26,24 @@ async def test_track_known_shipment():
     assert detail.active_step == "DELIVERED"
     assert len(detail.events) == 7
     assert trip is not None
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+async def test_track_recovers_after_real_page_crash():
+    """Kill the real Playwright page mid-session and confirm the next lookup
+    transparently recovers instead of raising."""
+    async with TrackingClient() as client:
+        crashed_page = client._page
+        await crashed_page.close()
+        assert crashed_page.is_closed()
+
+        summary, detail, trip = await client.track(KNOWN_REFERENCE)
+
+        assert client._page is not crashed_page
+        assert not client._page.is_closed()
+
+    assert summary.stt == KNOWN_STT
+    assert detail.stt_number == KNOWN_STT
+    assert detail.active_step == "DELIVERED"
+    assert trip is not None
