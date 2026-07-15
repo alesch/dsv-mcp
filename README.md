@@ -1,7 +1,7 @@
 # DSV / DB Schenker tracking MCP server
 
 An MCP server that looks up shipments on DSV's public tracking site
-(formerly dbschenker.com`), exposing one tool: `track_shipment(reference_number)`.
+(formerly `dbschenker.com`), exposing one tool: `track_shipment(reference_number)`.
 
 ## Install / use it
 
