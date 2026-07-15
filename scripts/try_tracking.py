@@ -22,6 +22,9 @@ from dsv_tracking.models import ShipmentNotFound
 
 
 async def main() -> int:
+    import logging
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
     parser = argparse.ArgumentParser()
     parser.add_argument("reference_number")
     parser.add_argument("--show", action="store_true", help="run with a visible browser window")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 import re
 import time
@@ -19,6 +20,8 @@ _DETAIL_RE = re.compile(r"/nges-portal/api/public/tracking-public/shipments/[a-z
 _TRIP_RE = re.compile(r"/nges-portal/api/public/tracking-public/shipments/[a-z]+/[^/]+/trip$")
 
 _PROFILE_DIR = Path.home() / ".cache" / "dsv-tracking-mcp" / "browser-profile"
+
+logger = logging.getLogger(__name__)
 
 
 class TrackingClient:
@@ -54,6 +57,7 @@ class TrackingClient:
 
     async def start(self) -> None:
         _PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info("Starting Playwright Chromium browser using profile: %s", _PROFILE_DIR)
         self._playwright = await async_playwright().start()
         self._context = await self._playwright.chromium.launch_persistent_context(
             user_data_dir=str(_PROFILE_DIR),
@@ -82,8 +86,10 @@ class TrackingClient:
 
     async def _warm_up(self) -> None:
         """Load the bare tracking page once so cookie consent is settled."""
+        url = f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}"
+        logger.info("Warming up browser context by loading %s", url)
         await self._page.goto(
-            f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}",
+            url,
             wait_until="networkidle",
         )
         await self._accept_cookies_if_present()
@@ -93,11 +99,12 @@ class TrackingClient:
             for frame in self._page.frames:
                 button = frame.get_by_role("button", name=re.compile("accept", re.I))
                 if await button.count() > 0:
+                    logger.info("Found cookie consent banner. Accepting...")
                     await button.first.click(timeout=3000)
                     await self._human_delay()
                     return
-        except Exception:
-            # Consent already granted (persistent profile) or banner not present.
+        except Exception as exc:
+            logger.debug("Cookie consent banner check failed or already accepted: %s", exc)
             pass
 
     async def _human_delay(self) -> None:
@@ -109,6 +116,7 @@ class TrackingClient:
         elapsed = time.monotonic() - self._last_call_at
         remaining = self._cooldown - elapsed
         if remaining > 0:
+            logger.info("Enforcing rate limit cooldown. Sleeping for %.2f seconds...", remaining)
             await asyncio.sleep(remaining)
 
     async def track(self, reference_number: str) -> tuple[ShipmentSummary, ShipmentDetail, Trip | None]:
@@ -126,6 +134,7 @@ class TrackingClient:
     async def _track_locked(
         self, reference_number: str
     ) -> tuple[ShipmentSummary, ShipmentDetail, Trip | None]:
+        logger.info("Initiating tracking request for reference: %s", reference_number)
         search_future: asyncio.Future[Response] = asyncio.get_event_loop().create_future()
         detail_future: asyncio.Future[Response] = asyncio.get_event_loop().create_future()
         trip_future: asyncio.Future[Response] = asyncio.get_event_loop().create_future()
@@ -143,31 +152,45 @@ class TrackingClient:
 
         self._page.on("response", on_response)
         try:
+            logger.debug("Applying random human pacing delay...")
             await self._human_delay()
+            url = f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}&refNumber={reference_number}"
+            logger.info("Navigating browser to tracking URL: %s", url)
             await self._page.goto(
-                f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}&refNumber={reference_number}",
+                url,
                 wait_until="networkidle",
             )
             await self._accept_cookies_if_present()
 
+            logger.info("Waiting for API search response resolving reference...")
             search_response = await asyncio.wait_for(search_future, timeout=self._response_timeout)
             search_data = await search_response.json()
             results = search_data.get("result", [])
             if not results:
+                logger.warning("No shipment found for reference: %s", reference_number)
                 raise ShipmentNotFound(reference_number)
             summary = ShipmentSummary.model_validate(results[0])
+            logger.info("Shipment resolved. ID: %s, STT: %s", summary.id, summary.stt)
 
+            logger.info("Waiting for API shipment details response...")
             detail_response = await asyncio.wait_for(detail_future, timeout=self._response_timeout)
             detail_data = await detail_response.json()
             detail = ShipmentDetail.model_validate(detail_data)
+            logger.info("Shipment details received (active step: %s)", detail.active_step)
 
             trip: Trip | None = None
             try:
+                logger.info("Waiting for optional API trip route details response...")
                 trip_response = await asyncio.wait_for(trip_future, timeout=self._response_timeout)
                 trip = Trip.model_validate(await trip_response.json())
+                logger.info("Trip route data loaded successfully (%d points)", len(trip.points))
             except asyncio.TimeoutError:
+                logger.info("Trip route request timed out (trip route not available)")
                 trip = None
 
             return summary, detail, trip
+        except Exception as exc:
+            logger.error("Tracking lookup failed for reference %s: %s", reference_number, exc, exc_info=True)
+            raise
         finally:
             self._page.remove_listener("response", on_response)
