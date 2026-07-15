@@ -12,7 +12,7 @@ See [`docs/installation.md`](docs/installation.md) — Docker is the only prereq
 
 This MCP simulates a human user looking up shipments on DSV's public tracking site. This is to avoid anti-bot measures from DSV.  
 
-A Playwright browser drives the whole interaction. No simultaneous lookups are supported and delays are added on pourpose.   
+A Playwright browser drives the whole interaction. No simultaneous lookups are supported and delays are added on pourpose.     
 This MCP is distribuited as a docker image to simplify the installation of Playwright's dependencies. 
 
 ## Documentation
@@ -35,9 +35,9 @@ Dockerfile       Debian-slim image published to GHCR
 Tests are tiered by marker (`pyproject.toml`):
 
 ```
-uv run pytest                # offline, no network -- runs by default
-uv run pytest -m integration  # real lookups against the live DSV site
-uv run pytest -m docker        # same, against a locally built image
+uv run pytest                   # offline, no network -- runs by default
+uv run pytest -m integration    # real lookups against the live DSV site
+uv run pytest -m docker         # same, against a locally built image
 ```
 
 `docker build -t dsv-tracking-mcp:demo .` builds the local test image used by the `docker`-marked tests.
