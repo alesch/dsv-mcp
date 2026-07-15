@@ -142,6 +142,7 @@ class TrackingClient:
             wait_until="networkidle",
         )
         await self._accept_cookies_if_present()
+        logger.info("Warm-up complete; cookies settled.")
 
     async def _accept_cookies_if_present(self) -> None:
         try:
@@ -156,8 +157,11 @@ class TrackingClient:
             logger.debug("Cookie consent banner check failed or already accepted: %s", exc)
             pass
 
-    async def _human_delay(self) -> None:
-        await asyncio.sleep(random.uniform(self._min_delay, self._max_delay))
+    async def _human_delay(self, delay: float | None = None) -> float:
+        if delay is None:
+            delay = random.uniform(self._min_delay, self._max_delay)
+        await asyncio.sleep(delay)
+        return delay
 
     async def _respect_cooldown(self) -> None:
         if self._last_call_at is None:
@@ -213,8 +217,11 @@ class TrackingClient:
 
         self._page.on("response", on_response)
         try:
-            logger.debug("Applying random human pacing delay...")
-            await self._human_delay()
+            delay = random.uniform(self._min_delay, self._max_delay)
+            logger.info(
+                "Navigating to shipment %s in %.1fs (human-pacing delay)...", reference_number, delay
+            )
+            await self._human_delay(delay)
             url = f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}&refNumber={reference_number}"
             logger.info("Navigating browser to tracking URL: %s", url)
             await self._page.goto(
@@ -222,6 +229,7 @@ class TrackingClient:
                 wait_until="networkidle",
             )
             await self._accept_cookies_if_present()
+            logger.info("Page loaded, challenge solved; parsing responses for %s...", reference_number)
 
             logger.info("Waiting for API search response resolving reference...")
             search_response = await asyncio.wait_for(search_future, timeout=self._response_timeout)
