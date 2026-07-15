@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Just [Docker](https://docs.docker.com/get-docker/).
+Just Docker. See their [installation guide](https://docs.docker.com/engine/install/) for details.
 
 ## 1. Add it to your MCP client config
 
@@ -75,16 +75,6 @@ Restart your MCP client afterward so it spawns a fresh container from the
 updated image.
 
 ## 4. Verifying it works
-
-### Quick sanity check: does it start?
-
-```
-docker run -i --rm ghcr.io/alesch/dsv-mcp:master
-```
-
-It speaks MCP over stdio and won't print anything on its own — Ctrl-C to
-stop. This only confirms the container starts; it doesn't exercise
-`track_shipment`.
 
 ### Send it a reference number and read the output directly
 
