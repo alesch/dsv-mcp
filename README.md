@@ -1,8 +1,7 @@
 # DSV / DB Schenker tracking MCP server
 
 An MCP server that looks up shipments on DSV's public tracking site
-(`https://www.dsv.com/mydsv/tracking-public/`, formerly
-`dbschenker.com`), exposing one tool: `track_shipment(reference_number)`.
+(formerly dbschenker.com`), exposing one tool: `track_shipment(reference_number)`.
 
 ## Install / use it
 
@@ -12,7 +11,8 @@ See [`docs/installation.md`](docs/installation.md) — Docker is the only prereq
 ## How it works
 
 This MCP simulates a human user looking up shipments on DSV's public tracking site. This is to avoid anti-bot measures from DSV.  
-A Playwright browser drives the whole interaction. No simultaneous lookups are supported and delays are added on pourpose.  
+
+A Playwright browser drives the whole interaction. No simultaneous lookups are supported and delays are added on pourpose.   
 This MCP is distribuited as a docker image to simplify the installation of Playwright's dependencies. 
 
 ## Documentation
