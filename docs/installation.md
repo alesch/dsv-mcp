@@ -23,6 +23,41 @@ For Claude Code, equivalently:
 claude mcp add dsv-tracking -- docker run -i --rm ghcr.io/alesch/dsv-mcp:master
 ```
 
+Other popular clients accept the same (or a near-identical) `mcpServers`
+block shown above, just in a different config file:
+
+- **Cursor** — add it to `~/.cursor/mcp.json` (global, all projects) or
+  `.cursor/mcp.json` in a project root (project-only, safe to commit for a
+  shared team config). No CLI needed; also editable via Settings → MCP.
+- **Windsurf** — same block, in `~/.codeium/windsurf/mcp_config.json`.
+- **Antigravity** (Google) — same block, in
+  `~/.gemini/config/mcp_config.json` (shared by the Antigravity IDE and
+  CLI). Also reachable in-app: agent panel's MCP Servers dropdown → Manage
+  MCP Servers → View raw config.
+- **VS Code** (GitHub Copilot) — almost the same, but the top-level key is
+  `servers` instead of `mcpServers`, in `.vscode/mcp.json` (workspace) or
+  your user profile. Equivalently from the command line:
+
+  ```
+  code --add-mcp "{\"name\":\"dsv-tracking\",\"command\":\"docker\",\"args\":[\"run\",\"-i\",\"--rm\",\"ghcr.io/alesch/dsv-mcp:master\"]}"
+  ```
+
+- **Zed editor** — different key and shape (`context_servers`, and each entry
+  needs `"source": "custom"`), in `~/.config/zed/settings.json` (open it
+  from the command palette with "zed: open settings"):
+
+  ```json
+  {
+    "context_servers": {
+      "dsv-tracking": {
+        "source": "custom",
+        "command": "docker",
+        "args": ["run", "-i", "--rm", "ghcr.io/alesch/dsv-mcp:master"]
+      }
+    }
+  }
+  ```
+
 The image is public — no `docker login` needed.
 
 ## 2. Understanding the first-run delay
