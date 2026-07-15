@@ -1,12 +1,31 @@
 # Installing the DSV tracking MCP server
 
+## Table of contents
+
+- [Prerequisites](#prerequisites)
+- [1. MCP client config](#1-mcp-client-config)
+  - [Claude Code](#claude-code)
+  - [Cursor](#cursor)
+  - [Windsurf](#windsurf)
+  - [Antigravity](#antigravity)
+  - [VS Code](#vs-code)
+  - [Zed editor](#zed-editor)
+  - [opencode](#opencode)
+  - [Pi](#pi)
+- [2. Understanding the first-run delay](#2-understanding-the-first-run-delay)
+  - [A second, unrelated delay: per-lookup pacing](#a-second-unrelated-delay-per-lookup-pacing)
+- [3. Getting updates later](#3-getting-updates-later)
+- [4. Verifying it works](#4-verifying-it-works)
+  - [Send it a reference number and read the output directly](#send-it-a-reference-number-and-read-the-output-directly)
+  - [Through an MCP client](#through-an-mcp-client)
+
 ## Prerequisites
 
 Just Docker. See their [installation guide](https://docs.docker.com/engine/install/) for details.
 
 The image is public — no `docker login` needed.
 
-## 1. Add it to your MCP client config
+## 1. MCP client config
 
 ```json
 {
@@ -19,63 +38,75 @@ The image is public — no `docker login` needed.
 }
 ```
 
-- **Claude Code**
+### Claude Code
 
 ```
 claude mcp add dsv-tracking -- docker run -i --rm ghcr.io/alesch/dsv-mcp:master
 ```
 
-- **Cursor** — add it to `~/.cursor/mcp.json` (global, all projects) or
-  `.cursor/mcp.json` in a project root (project-only, safe to commit for a
-  shared team config). No CLI needed; also editable via Settings → MCP.
+### Cursor
 
-- **Windsurf** — same block, in `~/.codeium/windsurf/mcp_config.json`.
+Add it to `~/.cursor/mcp.json` (global, all projects) or
+`.cursor/mcp.json` in a project root (project-only, safe to commit for a
+shared team config). No CLI needed; also editable via Settings → MCP.
 
-- **Antigravity** — same block, in
-  `~/.gemini/config/mcp_config.json` (shared by the Antigravity IDE and
-  CLI). Also reachable in-app: agent panel's MCP Servers dropdown → Manage
-  MCP Servers → View raw config.
+### Windsurf
 
-- **VS Code** (GitHub Copilot) — in `.vscode/mcp.json` (workspace) or
-  your user profile. Equivalently from the command line:
+Same block, in `~/.codeium/windsurf/mcp_config.json`.
 
-  ```
-  code --add-mcp "{\"name\":\"dsv-tracking\",\"command\":\"docker\",\"args\":[\"run\",\"-i\",\"--rm\",\"ghcr.io/alesch/dsv-mcp:master\"]}"
-  ```
+### Antigravity
 
-- **Zed editor** — in `~/.config/zed/settings.json` (open it
-  from the command palette with "zed: open settings"):
+Same block, in `~/.gemini/config/mcp_config.json` (shared by the
+Antigravity IDE and CLI). Also reachable in-app: agent panel's MCP Servers
+dropdown → Manage MCP Servers → View raw config.
 
-  ```json
-  {
-    "context_servers": {
-      "dsv-tracking": {
-        "source": "custom",
-        "command": "docker",
-        "args": ["run", "-i", "--rm", "ghcr.io/alesch/dsv-mcp:master"]
-      }
+### VS Code
+
+(GitHub Copilot) — in `.vscode/mcp.json` (workspace) or your user profile.
+Equivalently from the command line:
+
+```
+code --add-mcp "{\"name\":\"dsv-tracking\",\"command\":\"docker\",\"args\":[\"run\",\"-i\",\"--rm\",\"ghcr.io/alesch/dsv-mcp:master\"]}"
+```
+
+### Zed editor
+
+In `~/.config/zed/settings.json` (open it from the command palette with
+"zed: open settings"):
+
+```json
+{
+  "context_servers": {
+    "dsv-tracking": {
+      "source": "custom",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/alesch/dsv-mcp:master"]
     }
   }
-  ```
+}
+```
 
-- **opencode** — in `opencode.json` (project root) or
-  `~/.config/opencode/opencode.json` (global):
+### opencode
 
-  ```json
-  {
-    "mcp": {
-      "dsv-tracking": {
-        "type": "local",
-        "command": ["docker", "run", "-i", "--rm", "ghcr.io/alesch/dsv-mcp:master"]
-      }
+In `opencode.json` (project root) or `~/.config/opencode/opencode.json`
+(global):
+
+```json
+{
+  "mcp": {
+    "dsv-tracking": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "ghcr.io/alesch/dsv-mcp:master"]
     }
   }
-  ```
+}
+```
 
-- **Pi** (pi.dev coding agent) — same `mcpServers` block as the generic
-  example above, in `~/.pi/agent/mcp.json`. Also configurable interactively
-  by running `/mcp` inside Pi.
+### Pi
 
+(pi.dev coding agent) — same `mcpServers` block as the generic example
+above, in `~/.pi/agent/mcp.json`. Also configurable interactively by
+running `/mcp` inside Pi.
 
 ## 2. Understanding the first-run delay
 
