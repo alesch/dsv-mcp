@@ -229,3 +229,27 @@ installed transitive dependency (via `mcp`), so this added nothing new.
 The migration was verified by the pytest suite (offline model-parsing
 tests, the schema check, and the real integration/docker end-to-end
 tests) rather than another round of manual scripts.
+
+---
+
+## ADR-0012: Use a different local build tag than the published image tag
+
+**Context:** Local test builds use `docker build -t dsv-tracking-mcp:demo .`
+(see `test/test_docker_image.py`), while the published image is
+`ghcr.io/alesch/dsv-mcp:master` / `:<sha>` (ADR-0008). These are different
+tag names, which raised the question of why not unify them.
+
+**Decision:** Keep them deliberately distinct rather than have local
+builds also tag as `ghcr.io/alesch/dsv-mcp:master`. If a local build used
+that exact tag, it would silently overwrite that slot in the local Docker
+image cache — same tag name, same cache entry. After that, `docker run
+ghcr.io/alesch/dsv-mcp:master` would run the local working-tree build, not
+what's actually published on GHCR, until an explicit `docker pull`
+overwrote it back.
+
+**Consequences:** A local build and "what's actually published" can never
+be confused with each other in the local image cache — one tag always
+means "my current working tree," the other always means "what GHCR has."
+The cost is one more tag name to keep track of, which is trivial next to
+the risk of believing a published-image test passed when it actually only
+exercised an uncommitted local change.
