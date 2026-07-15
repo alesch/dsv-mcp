@@ -12,8 +12,9 @@
   - [Zed editor](#zed-editor)
   - [opencode](#opencode)
   - [Pi](#pi)
-- [2. Understanding the first-run delay](#2-understanding-the-first-run-delay)
-  - [A second, unrelated delay: per-lookup pacing](#a-second-unrelated-delay-per-lookup-pacing)
+- [2. Understanding delays](#2-understanding-delays)
+  - [First-run delay](#first-run-delay)
+  - [per-lookup pacing](#per-lookup-pacing)
 - [3. Getting updates later](#3-getting-updates-later)
 - [4. Verifying it works](#4-verifying-it-works)
   - [Send it a reference number and read the output directly](#send-it-a-reference-number-and-read-the-output-directly)
@@ -108,79 +109,56 @@ In `opencode.json` (project root) or `~/.config/opencode/opencode.json`
 above, in `~/.pi/agent/mcp.json`. Also configurable interactively by
 running `/mcp` inside Pi.
 
-## 2. Understanding the first-run delay
+## 2. Understanding delays
 
-Your MCP client doesn't fetch the image itself — it spawns `docker run`,
-and **`docker` decides whether to pull** based on whether the image tag
-already exists locally:
+### First-run delay
 
-- **First time ever** this tag runs on your machine: it isn't cached
-  locally, so `docker` pulls the full image from GHCR before starting the
-  server. The image is 600MB uncompressed (Chromium plus its system
-  libraries dominate that size). Your MCP client may look like it's hung
-  during this — it isn't, `docker` is downloading in the background.
-- **Every launch after that**: the tag is already cached locally, so
-  `docker run` starts immediately (a couple seconds) with no network
-  fetch at all. `:master` is a moving tag, but Docker does not
-  automatically re-check the registry for a newer version of a tag it
-  already has cached — so this stays fast indefinitely, until you
-  explicitly pull again.
+Your MCP client doesn't fetch the image itself — it spawns `docker run`, and **`docker` decides whether to pull** based on whether the image tag already exists locally.
 
-**To avoid hitting that delay live** (e.g. right before a demo), pre-pull
-once ahead of time:
+- **First time ever** this tag runs on your machine: it isn't cached locally, so `docker` pulls the full image from GHCR before starting the server.   
+The image is 600MB uncompressed (Chromium plus its system
+  libraries dominate that size). Your MCP client may look like it's hung during this — it isn't, `docker` is downloading in the background.
+- **Every launch after that**: the tag is already cached locally, so `docker run` starts immediately (a couple seconds) with no network fetch at all. `:master` is a moving tag, but Docker does not automatically re-check the registry for a newer version of a tag it already has cached — so this stays fast indefinitely, until you explicitly pull again.
+
+**To avoid hitting that delay live** (e.g. right before a demo), pre-pull once ahead of time:
 
 ```
 docker pull ghcr.io/alesch/dsv-mcp:master
 ```
 
-then your MCP client's first real launch will already find the image
-cached and start fast.
+then your MCP client's first real launch will already find the image cached and start fast.
 
-### A second, unrelated delay: per-lookup pacing
+### Per-lookup pacing
 
-Once the server is running, each `track_shipment` call still takes up to
-~30 seconds — that's not a download, it's the tool deliberately driving a
-real browser with human-like pauses (see
-[`anti-bot-puzzle.md`](./anti-bot-puzzle.md)) instead of hammering DSV's
-API. The per-call delay happens on every single lookup, by design.
+Once the server is running, each `track_shipment` call still takes up to ~30 seconds — that's not a download, it's the tool deliberately driving a real browser with human-like pauses (see
+[`anti-bot-puzzle.md`](./anti-bot-puzzle.md)) instead of hammering DSV's API. The per-call delay happens on every single lookup, by design.
 
 ## 3. Getting updates later
 
-Since `:master` won't auto-refresh, picking up a newer build (after a new
-push to the repo triggers `.github/workflows/docker-publish.yml`) requires
-an explicit re-pull:
+Since `:master` won't auto-refresh, picking up a newer build (after a new push to the repo triggers `.github/workflows/docker-publish.yml`) requires an explicit re-pull:
 
 ```
 docker pull ghcr.io/alesch/dsv-mcp:master
 ```
 
-Restart your MCP client afterward so it spawns a fresh container from the
-updated image.
+Restart your MCP client afterward so it spawns a fresh container from the updated image.
 
 ## 4. Verifying it works
 
 ### Send it a reference number and read the output directly
 
 The image also ships the standalone CLI script (`scripts/try_tracking.py`)
-that the server itself is built on, so you can send it a real reference
-number and see human-readable output on your console — no MCP client
-needed. Override the image's default entrypoint (which normally starts
-the MCP stdio server) to run the script instead:
+that the server itself is built on, so you can send it a real reference number and see human-readable output on your console — no MCP client needed. Override the image's default entrypoint (which normally starts the MCP stdio server) to run the script instead:
 
 ```
 docker run --rm --entrypoint uv ghcr.io/alesch/dsv-mcp:master \
   run python scripts/try_tracking.py 3476236157
 ```
 
-This drives the same real, paced browser lookup `track_shipment` would
-(see the per-lookup pacing note above — expect it to take up to ~30
-seconds) and prints the shipment's status, route, and full event
-timeline. It's the fastest way to confirm the image actually works
-end-to-end after installing, before wiring it into an MCP client at all.
+This drives the same real, paced browser lookup `track_shipment` would (see the per-lookup pacing note above — expect it to take up to ~30 seconds) and prints the shipment's status, route, and full event timeline. It's the fastest way to confirm the image actually works end-to-end after installing, before wiring it into an MCP client at all.
 
 ### Through an MCP client
 
 Once the above works, use it through your MCP client with a real
 reference number (e.g. one from
-[`../test/reference_numbers.txt`](../test/reference_numbers.txt)) to
-confirm the `track_shipment` tool itself responds correctly.
+[`../test/reference_numbers.txt`](../test/reference_numbers.txt)) to confirm the `track_shipment` tool itself responds correctly.
