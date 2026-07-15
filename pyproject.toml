@@ -9,6 +9,9 @@ dependencies = [
     "pydantic>=2.0",
 ]
 
+[project.scripts]
+dsv-tracking-mcp = "dsv_tracking.server:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",
