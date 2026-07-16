@@ -27,17 +27,16 @@ async def test_track_shipment_over_stdio():
         args=["run", "python", "-m", "dsv_tracking.server"],
         cwd=str(REPO_ROOT),
     )
-    async with stdio_client(params) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
+    async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
 
-            tools = await session.list_tools()
-            assert "track_shipment" in [t.name for t in tools.tools]
+        tools = await session.list_tools()
+        assert "track_shipment" in [t.name for t in tools.tools]
 
-            result = await session.call_tool("track_shipment", {"reference_number": KNOWN_REFERENCE})
-            assert not result.isError
+        result = await session.call_tool("track_shipment", {"reference_number": KNOWN_REFERENCE})
+        assert not result.isError
 
-            [block] = result.content
-            payload = json.loads(block.text)
-            assert payload["summary"]["stt"] == KNOWN_STT
-            assert payload["detail"]["active_step"] == "DELIVERED"
+        [block] = result.content
+        payload = json.loads(block.text)
+        assert payload["summary"]["stt"] == KNOWN_STT
+        assert payload["detail"]["active_step"] == "DELIVERED"

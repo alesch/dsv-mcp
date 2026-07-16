@@ -253,7 +253,7 @@ class TrackingClient:
                 trip_response = await asyncio.wait_for(trip_future, timeout=self._response_timeout)
                 trip = Trip.model_validate(await trip_response.json())
                 logger.info("Trip route data loaded successfully (%d points)", len(trip.points))
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.info("Trip route request timed out (trip route not available)")
                 trip = None
 

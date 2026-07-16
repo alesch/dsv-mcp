@@ -19,7 +19,7 @@ import argparse
 import asyncio
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -80,7 +80,7 @@ async def main() -> int:
             )
 
     output = {
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "fetched_at": datetime.now(UTC).isoformat(),
         "results": results,
     }
     args.output.write_text(json.dumps(output, indent=2, ensure_ascii=False))
