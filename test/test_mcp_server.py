@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.types import TextContent
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 KNOWN_REFERENCE = "3476236157"
@@ -37,6 +38,7 @@ async def test_track_shipment_over_stdio():
         assert not result.isError
 
         [block] = result.content
+        assert isinstance(block, TextContent)
         payload = json.loads(block.text)
         assert payload["summary"]["stt"] == KNOWN_STT
         assert payload["detail"]["active_step"] == "DELIVERED"
