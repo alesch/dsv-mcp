@@ -57,8 +57,12 @@ class TrackingClient:
         user_data_dir: Path | str | None = None,
     ):
         self._headless = headless if headless is not None else _env_bool("TRACKING_HEADLESS", True)
-        self._min_delay = min_delay if min_delay is not None else _env_float("TRACKING_MIN_DELAY", 1.0)
-        self._max_delay = max_delay if max_delay is not None else _env_float("TRACKING_MAX_DELAY", 3.0)
+        self._min_delay = (
+            min_delay if min_delay is not None else _env_float("TRACKING_MIN_DELAY", 1.0)
+        )
+        self._max_delay = (
+            max_delay if max_delay is not None else _env_float("TRACKING_MAX_DELAY", 3.0)
+        )
         self._cooldown = cooldown if cooldown is not None else _env_float("TRACKING_COOLDOWN", 7.0)
         self._response_timeout = (
             response_timeout
@@ -172,7 +176,9 @@ class TrackingClient:
             logger.info("Enforcing rate limit cooldown. Sleeping for %.2f seconds...", remaining)
             await asyncio.sleep(remaining)
 
-    async def track(self, reference_number: str) -> tuple[ShipmentSummary, ShipmentDetail, Trip | None]:
+    async def track(
+        self, reference_number: str
+    ) -> tuple[ShipmentSummary, ShipmentDetail, Trip | None]:
         """Look up a shipment by reference number.
 
         Raises ShipmentNotFound if the site has no match.
@@ -188,7 +194,7 @@ class TrackingClient:
                     if self._is_healthy():
                         raise
                     logger.warning(
-                        "Browser context died mid-lookup for reference %s; recovering and retrying once",
+                        "Browser context died mid-lookup for reference %s; recovering and retrying",
                         reference_number,
                     )
                     await self._recover()
@@ -219,17 +225,24 @@ class TrackingClient:
         try:
             delay = random.uniform(self._min_delay, self._max_delay)
             logger.info(
-                "Navigating to shipment %s in %.1fs (human-pacing delay)...", reference_number, delay
+                "Navigating to shipment %s in %.1fs (human-pacing delay)...",
+                reference_number,
+                delay,
             )
             await self._human_delay(delay)
-            url = f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}&refNumber={reference_number}"
+            url = (
+                f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}"
+                f"&refNumber={reference_number}"
+            )
             logger.info("Navigating browser to tracking URL: %s", url)
             await self._page.goto(
                 url,
                 wait_until="networkidle",
             )
             await self._accept_cookies_if_present()
-            logger.info("Page loaded, challenge solved; parsing responses for %s...", reference_number)
+            logger.info(
+                "Page loaded, challenge solved; parsing responses for %s...", reference_number
+            )
 
             logger.info("Waiting for API search response resolving reference...")
             search_response = await asyncio.wait_for(search_future, timeout=self._response_timeout)
@@ -259,7 +272,9 @@ class TrackingClient:
 
             return summary, detail, trip
         except Exception as exc:
-            logger.error("Tracking lookup failed for reference %s: %s", reference_number, exc, exc_info=True)
+            logger.error(
+                "Tracking lookup failed for reference %s: %s", reference_number, exc, exc_info=True
+            )
             raise
         finally:
             self._page.remove_listener("response", on_response)

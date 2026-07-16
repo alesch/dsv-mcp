@@ -65,7 +65,10 @@ async def track_shipment(reference_number: str, ctx: Context) -> TrackShipmentRe
 
 def main() -> None:
     import logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
     mcp.run()
 
 

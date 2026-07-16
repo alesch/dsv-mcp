@@ -23,7 +23,10 @@ from dsv_tracking.models import ShipmentNotFound
 
 async def main() -> int:
     import logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
 
     parser = argparse.ArgumentParser()
     parser.add_argument("reference_number")
@@ -40,7 +43,10 @@ async def main() -> int:
         print(f"STT number:      {summary.stt}")
         print(f"Transport mode:  {summary.transport_mode}")
         print(f"Route:           {summary.from_location} -> {summary.to_location}")
-        print(f"Progress:        {summary.percentage_progress}% (last event: {summary.last_event_code})")
+        print(
+            f"Progress:        {summary.percentage_progress}% "
+            f"(last event: {summary.last_event_code})"
+        )
         print()
         print(f"Status:          {detail.active_step}")
         print(f"Steps:           {' -> '.join(detail.steps)}")
@@ -52,7 +58,9 @@ async def main() -> int:
         print()
         print("Events:")
         for event in detail.events:
-            print(f"  {event.date}  {event.code:5s}  {event.comment or '':20s}  {event.location_name}")
+            print(
+                f"  {event.date}  {event.code:5s}  {event.comment or '':20s}  {event.location_name}"
+            )
 
         if trip is not None:
             print()

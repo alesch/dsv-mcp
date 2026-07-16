@@ -70,8 +70,18 @@ SHIPMENT_DETAIL_RESPONSE = {
         "activeStep": "DELIVERED",
     },
     "location": {
-        "collectFrom": {"countryCode": "SE", "country": "Sweden", "city": "Norsborg", "postCode": "14563"},
-        "deliverTo": {"countryCode": "SE", "country": "Sweden", "city": "Växjö", "postCode": "35250"},
+        "collectFrom": {
+            "countryCode": "SE",
+            "country": "Sweden",
+            "city": "Norsborg",
+            "postCode": "14563",
+        },
+        "deliverTo": {
+            "countryCode": "SE",
+            "country": "Sweden",
+            "city": "Växjö",
+            "postCode": "35250",
+        },
     },
 }
 
@@ -79,8 +89,18 @@ TRIP_RESPONSE = {
     "start": {"name": None, "latitude": 59.22888181, "longitude": 17.840829818},
     "end": {"name": None, "latitude": 56.914394339, "longitude": 14.73500537},
     "trip": [
-        {"lastEventCode": "COL", "lastEventDate": "2026-05-15T14:00:00+02:00", "latitude": 59.22888181, "longitude": 17.840829818},
-        {"lastEventCode": "DLV", "lastEventDate": "2026-05-18T10:57:31+02:00", "latitude": 56.914394339, "longitude": 14.73500537},
+        {
+            "lastEventCode": "COL",
+            "lastEventDate": "2026-05-15T14:00:00+02:00",
+            "latitude": 59.22888181,
+            "longitude": 17.840829818,
+        },
+        {
+            "lastEventCode": "DLV",
+            "lastEventDate": "2026-05-18T10:57:31+02:00",
+            "latitude": 56.914394339,
+            "longitude": 14.73500537,
+        },
     ],
     "isDelivered": True,
 }
@@ -103,7 +123,13 @@ def test_shipment_detail_from_json():
     assert detail.transport_mode == "LAND"
     assert detail.product == "DSVparcel"
     assert detail.active_step == "DELIVERED"
-    assert detail.steps == ["BOOKED", "TRANSPORTATION", "DISPATCHING_CENTER", "IN_DELIVERY", "DELIVERED"]
+    assert detail.steps == [
+        "BOOKED",
+        "TRANSPORTATION",
+        "DISPATCHING_CENTER",
+        "IN_DELIVERY",
+        "DELIVERED",
+    ]
     assert detail.pieces == 1
     assert detail.weight_value == 0.8
     assert detail.weight_unit == "KGS"
@@ -137,4 +163,6 @@ def test_shipment_summary_missing_field_raises_validation_error():
         ShipmentSummary.model_validate(incomplete)
 
     errors = exc_info.value.errors()
-    assert any(error["loc"] == ("transportMode",) and error["type"] == "missing" for error in errors)
+    assert any(
+        error["loc"] == ("transportMode",) and error["type"] == "missing" for error in errors
+    )
