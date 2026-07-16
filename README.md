@@ -41,3 +41,11 @@ uv run pytest -m docker         # same, against a locally built image
 ```
 
 `docker build -t dsv-tracking-mcp:demo .` builds the local test image used by the `docker`-marked tests.
+
+Lint and type-check with [ruff](https://docs.astral.sh/ruff/) and [mypy](https://mypy.readthedocs.io/):
+
+```
+uv run ruff check .                       # lint
+uv run ruff format .                      # auto-format
+uv run mypy dsv_tracking test scripts     # type-check
+```
