@@ -35,11 +35,13 @@ async def test_track_recovers_after_real_page_crash():
     transparently recovers instead of raising."""
     async with TrackingClient() as client:
         crashed_page = client._page
+        assert crashed_page is not None
         await crashed_page.close()
         assert crashed_page.is_closed()
 
         summary, detail, trip = await client.track(KNOWN_REFERENCE)
 
+        assert client._page is not None
         assert client._page is not crashed_page
         assert not client._page.is_closed()
 

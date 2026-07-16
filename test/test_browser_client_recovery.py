@@ -43,10 +43,10 @@ class FakeContext:
         self.closed = True
 
 
-def _started_client(**kwargs) -> TrackingClient:
+def _started_client(page: FakePage | None = None, **kwargs) -> TrackingClient:
     client = TrackingClient(min_delay=0, max_delay=0, cooldown=0, **kwargs)
-    client._context = FakeContext()
-    client._page = FakePage(closed=False)
+    client._context = FakeContext()  # type: ignore[assignment]
+    client._page = page or FakePage(closed=False)  # type: ignore[assignment]
     return client
 
 
@@ -56,8 +56,7 @@ def test_is_healthy_false_before_start():
 
 
 def test_is_healthy_false_when_page_closed():
-    client = _started_client()
-    client._page._closed = True
+    client = _started_client(page=FakePage(closed=True))
     assert client._is_healthy() is False
 
 
@@ -74,8 +73,8 @@ async def test_track_recovers_proactively_when_never_started(monkeypatch):
     async def fake_recover():
         nonlocal recover_calls
         recover_calls += 1
-        client._context = FakeContext()
-        client._page = FakePage(closed=False)
+        client._context = FakeContext()  # type: ignore[assignment]
+        client._page = FakePage(closed=False)  # type: ignore[assignment]
 
     async def fake_track_locked(reference_number):
         return "summary", "detail", None
@@ -91,7 +90,8 @@ async def test_track_recovers_proactively_when_never_started(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_track_recovers_and_retries_once_after_mid_call_crash(monkeypatch):
-    client = _started_client()
+    page = FakePage(closed=False)
+    client = _started_client(page=page)
     call_count = 0
     recover_calls = 0
 
@@ -99,15 +99,15 @@ async def test_track_recovers_and_retries_once_after_mid_call_crash(monkeypatch)
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            client._page._closed = True  # simulate the crash killing the page
+            page._closed = True  # simulate the crash killing the page
             raise RuntimeError("Target crashed")
         return "summary", "detail", None
 
     async def fake_recover():
         nonlocal recover_calls
         recover_calls += 1
-        client._context = FakeContext()
-        client._page = FakePage(closed=False)
+        client._context = FakeContext()  # type: ignore[assignment]
+        client._page = FakePage(closed=False)  # type: ignore[assignment]
 
     monkeypatch.setattr(client, "_track_locked", fake_track_locked)
     monkeypatch.setattr(client, "_recover", fake_recover)

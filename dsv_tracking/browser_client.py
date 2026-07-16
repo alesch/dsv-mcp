@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from playwright.async_api import Response, async_playwright
+from playwright.async_api import BrowserContext, Page, Playwright, Response, async_playwright
 
 from dsv_tracking.models import ShipmentDetail, ShipmentNotFound, ShipmentSummary, Trip
 
@@ -79,9 +79,9 @@ class TrackingClient:
         self._lock = asyncio.Lock()
         self._last_call_at: float | None = None
 
-        self._playwright = None
-        self._context = None
-        self._page = None
+        self._playwright: Playwright | None = None
+        self._context: BrowserContext | None = None
+        self._page: Page | None = None
 
     async def start(self) -> None:
         self._user_data_dir.mkdir(parents=True, exist_ok=True)
@@ -139,6 +139,7 @@ class TrackingClient:
 
     async def _warm_up(self) -> None:
         """Load the bare tracking page once so cookie consent is settled."""
+        assert self._page is not None
         url = f"{TRACKING_URL}?language_region={DEFAULT_LANGUAGE_REGION}"
         logger.info("Warming up browser context by loading %s", url)
         await self._page.goto(
@@ -149,6 +150,7 @@ class TrackingClient:
         logger.info("Warm-up complete; cookies settled.")
 
     async def _accept_cookies_if_present(self) -> None:
+        assert self._page is not None
         try:
             for frame in self._page.frames:
                 button = frame.get_by_role("button", name=re.compile("accept", re.I))
@@ -205,6 +207,7 @@ class TrackingClient:
     async def _track_locked(
         self, reference_number: str
     ) -> tuple[ShipmentSummary, ShipmentDetail, Trip | None]:
+        assert self._page is not None
         logger.info("Initiating tracking request for reference: %s", reference_number)
         search_future: asyncio.Future[Response] = asyncio.get_event_loop().create_future()
         detail_future: asyncio.Future[Response] = asyncio.get_event_loop().create_future()
